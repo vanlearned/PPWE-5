@@ -9,6 +9,7 @@
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
+header('Content-Type: application/json; charset=UTF-8');
 
 // Tangani HTTP OPTIONS Pre-flight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -69,13 +70,39 @@ switch ($method) {
 function handleGet(PDO $pdo, ?int $id): void {
     if ($id !== null && $id > 0) {
         //Percobaan 5-2 Langkah 2 jika id diberikan
+        $stmt = $pdo->prepare('SELECT id, npm, nama, program_studi, angkatan, email FROM mahasiswa WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $id]);
+        $mahasiswa = $stmt->fetch();
+
+        if ($mahasiswa) {
+            http_response_code(200);
+            echo json_encode([
+                'status' => 'success',
+                'data' => $mahasiswa
+            ]);
+        } else {
+            http_response_code(404);
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Data mahasiswa dengan ID {$id} tidak ditemukan.",
+                'data' => null
+            ]);
+        }
 
     } else {
         $search = isset($_GET['search']) ? trim($_GET['search']) : '';
         if (!empty($search)) {
             //Percobaan 5-2 Langkah 2 jika search ada
+            $stmt = $pdo->prepare('SELECT id, npm, nama, program_studi, angkatan, email, created_at FROM mahasiswa where npm LIKE :kw1 OR nama LIKE :kw2 OR program_studi LIKE :kw3 ORDER BY id DESC');
+            $kw = "%{$search}%";
+            $stmt->execute([
+                ':kw1' => $kw,
+                ':kw2' => $kw,
+                ':kw3' => $kw,
+            ]);
         } else {
             //Percobaan 5-2 Langkah 2 jika tidak ada search
+            $stmt = $pdo->querry('SELECT id, npm, nama, program_studi, angkatan, email, created_at FROM mahasiswa ORDER BY id DESC');
         }
 
         $result = $stmt->fetchAll();
